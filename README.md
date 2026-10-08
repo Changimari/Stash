@@ -47,9 +47,21 @@ Hardened Runtime 用の entitlements は `src-tauri/entitlements.plist` に用�
 署名鍵は **`~/.stash/updater.key`（リポジトリ外）**。公開鍵だけが `tauri.conf.json` に入っている。
 **この鍵を失うと既存ユーザーへ更新を配れなくなる**ので必ずバックアップすること。
 
-配信するには `tauri.conf.json` の `plugins.updater.endpoints` を実際の URL に変える
-（現在は `CHANGE-ME` のプレースホルダ）。GitHub Releases に `latest.json` を置く構成が最も手軽。
-リリースビルドは `.app.tar.gz` と `.sig` を一緒に吐くので、それを配布物に含める。
+配信先は GitHub Releases。アプリは
+`https://github.com/Changimari/Stash/releases/latest/download/latest.json` を見に行く。
+
+リリースは 1 コマンド:
+
+```bash
+./scripts/publish.sh 0.1.1            # 署名なし
+./scripts/publish.sh 0.1.1 --signed   # 署名 + 公証つき
+```
+
+3 ファイルの version 更新 → ビルド → `latest.json` 生成 → タグ → Release 作成までやる。
+**`latest.json` を上げるまでアプリ内更新は配られない**ので、手でビルドだけしても更新は飛ばない。
+
+今は Apple Silicon 向けのみ。Intel も配るなら `x86_64` 向けをビルドして
+`publish.sh` の `platforms` に足す。
 
 ## 使い方
 

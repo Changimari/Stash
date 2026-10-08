@@ -78,7 +78,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/CHANGE-ME/stash/releases/latest/download/latest.json"
+        "https://github.com/Changimari/Stash/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFFMjY2RDcwNEFEMDJGRTUKUldUbEw5QktjRzBtSHRjZXQ3RmNVbGhDUGI2RDBacmUxQi95cHRja0tRS3lra1pnZHJHTGR2NG0K",
       "windows": {
