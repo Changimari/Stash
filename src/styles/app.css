@@ -1,0 +1,296 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+/* トークンを Tailwind のユーティリティに接続する。
+   色・角丸・タイポはすべて theme.css の 1 箇所で管理し、ここでは名前を配るだけ。 */
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-mono);
+
+  --text-title: var(--text-title);
+  --text-headline: var(--text-headline);
+  --text-body: var(--text-body);
+  --text-caption: var(--text-caption);
+  --text-footnote: var(--text-footnote);
+  --text-query: var(--text-query);
+
+  --color-label: var(--label-1);
+  --color-label-2: var(--label-2);
+  --color-label-3: var(--label-3);
+  --color-label-4: var(--label-4);
+  --color-separator: var(--separator);
+  --color-separator-strong: var(--separator-strong);
+  --color-fill-1: var(--fill-1);
+  --color-fill-2: var(--fill-2);
+  --color-fill-3: var(--fill-3);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-scrim: var(--scrim);
+  --color-scrim-strong: var(--scrim-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+
+  --radius-window: var(--radius-window);
+  --radius-lg: var(--radius-lg);
+  --radius-md: var(--radius-md);
+  --radius-sm: var(--radius-sm);
+  /* ここに登録し忘れると rounded-pill が「無効なクラス」になり、
+     角丸が一切効かないまま静かに四角く描かれる。 */
+  --radius-pill: var(--radius-pill);
+
+  --ease-out: var(--ease-out);
+}
+
+/* ─────────────────── ベース ─────────────────── */
+/* base レイヤーに入れること。レイヤー外に書くと Tailwind のユーティリティより
+   常に強くなり、`focus:outline-none` のような個別指定が効かなくなる。 */
+@layer base {
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-body);
+  line-height: 1.45;
+  letter-spacing: var(--tracking-tight);
+  color: var(--label-1);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+  cursor: default;
+
+  /* ネイティブアプリらしく、既定では文字を選択させない */
+  user-select: none;
+  -webkit-user-select: none;
+
+  /* 背景はネイティブ vibrancy が描く。webview 側は必ず透明にしておくこと。 */
+  background: transparent;
+}
+
+input,
+textarea,
+[contenteditable],
+.selectable {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: default;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: var(--label-4);
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--label-3);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* フォーカスリングはキーボード操作時のみ。macOS 流儀。 */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+}
+
+/* ─────────────────── 窓のマテリアル ─────────────────── */
+/* components レイヤー。ユーティリティで上書きできる強さに保つ。 */
+@layer components {
+
+/* オーバーレイ窓。角丸・縁・影はここで完結させる。 */
+.overlay-panel {
+  height: 100%;
+  border-radius: var(--radius-window);
+  background: var(--scrim);
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--window-edge),
+    0 0 0 0.5px var(--window-ring);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shelf。オーバーレイより一回り小さい角丸で、常駐しても邪魔にならない佇まいにする。 */
+.shelf-panel {
+  position: relative;
+  height: 100%;
+  border-radius: 14px;
+  background: var(--scrim);
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--window-edge),
+    0 0 0 0.5px var(--window-ring);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ドラッグ中に出る 2 分割の置き場。 */
+.dropzone-panel {
+  height: 100%;
+  border-radius: 14px;
+  background: var(--scrim-strong);
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--window-edge),
+    0 0 0 0.5px var(--window-ring);
+  overflow: hidden;
+}
+
+/* 表示時の 1 回だけの導入（§5: 120–180ms, ease-out、わずかなスケール） */
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+    transform: scale(0.972);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.overlay-panel[data-phase="entering"] {
+  animation: overlay-in var(--dur-window) var(--ease-out);
+}
+.overlay-panel[data-phase="leaving"] {
+  opacity: 0;
+  transform: scale(0.985);
+  transition:
+    opacity var(--dur-fast) ease-in,
+    transform var(--dur-fast) ease-in;
+}
+
+/* 管理画面。サイドバーだけ vibrancy を透かし、本体は不透明に塗る Apple の定番。 */
+.manager-shell {
+  height: 100%;
+  display: flex;
+  background: transparent;
+}
+.manager-sidebar {
+  background: transparent;
+  border-right: var(--hairline) solid var(--separator);
+}
+.manager-content {
+  background: var(--surface);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+:root[data-material="opaque"] .manager-sidebar {
+  background: var(--surface-raised);
+}
+
+/* macOS の信号機ボタンぶんの余白（titleBarStyle: Overlay）。
+   Windows / Linux は通常のタイトルバーが別にあるので余白を入れない。 */
+.traffic-light-inset {
+  padding-top: 8px;
+}
+:root[data-platform="macos"] .traffic-light-inset {
+  padding-top: 28px;
+}
+
+/* ─────────────────── 部品 ─────────────────── */
+
+/* 透過画像を正しく見せるための市松模様 */
+.checkerboard {
+  background-image:
+    linear-gradient(45deg, var(--checker-b) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--checker-b) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--checker-b) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--checker-b) 75%);
+  background-size: 12px 12px;
+  background-position:
+    0 0,
+    0 6px,
+    6px -6px,
+    -6px 0;
+  background-color: var(--checker-a);
+}
+
+/* キーキャップ表記（↩ / ⌘⇧C / esc など）。1 ショートカット = 1 キャップにまとめる。 */
+.keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 17px;
+  padding: 0 4.5px;
+  border-radius: 4px;
+  background: var(--fill-2);
+  color: var(--label-2);
+  font-size: var(--text-footnote);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.hairline-t {
+  border-top: var(--hairline) solid var(--separator);
+}
+.hairline-b {
+  border-bottom: var(--hairline) solid var(--separator);
+}
+
+/* 一覧の 1 行 / 1 タイル。選択はアクセント 1 色のみで示す（装飾色を増やさない）。 */
+.tile {
+  position: relative;
+  border-radius: var(--radius-md);
+  transition: background-color var(--dur-fast) linear;
+}
+.tile[data-selected="true"] {
+  background: var(--accent-soft);
+}
+.tile[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  pointer-events: none;
+}
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

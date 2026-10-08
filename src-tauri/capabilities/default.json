@@ -1,0 +1,45 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Stash の 3 つの窓（管理画面・オーバーレイ・Shelf）が使う権限一式",
+  "windows": [
+    "main",
+    "overlay",
+    "shelf"
+  ],
+  "permissions": [
+    "core:default",
+    "core:path:default",
+    "core:window:allow-start-dragging",
+    "os:default",
+    "store:default",
+    "dialog:default",
+    "fs:default",
+    "opener:default",
+    "sql:default",
+    "sql:allow-execute",
+    "drag:default",
+    "clipboard:allow-write-image-base64",
+    "clipboard:allow-write-files",
+    "clipboard:allow-write-files-uris",
+    "clipboard:allow-write-text",
+    "clipboard:allow-has-image",
+    "global-shortcut:default",
+    "autostart:default",
+    "updater:default",
+    "process:allow-restart"
+  ],
+  "//": [
+    "権限を足すときは gen/schemas/acl-manifests.json で「その :default が実際に何を許可するか」",
+    "を必ず確認すること。プラグインによっては default が空で、個別に許可しないと",
+    "コマンドが黙って拒否される（tauri-plugin-clipboard がまさにそれ）。",
+    "",
+    "core:default … 窓とイベントの基本。窓の表示制御は JS からではなく Rust コマンド経由。",
+    "sql:allow-execute … sql:default は select/load/close のみで INSERT/UPDATE を含まない。",
+    "drag:default … 他アプリへのドラッグアウト（start_drag）。§11 の必須項目。",
+    "clipboard … 画像ビットマップ・ファイル参照・パステキストの 3 経路ぶんだけを許可する。",
+    "global-shortcut … ホットキー登録は Rust 側で行うため JS からは呼ばない（保険として保持）。",
+    "fs:default … アプリ専用ディレクトリのみ。素材ファイルの読み書きは自前の Rust コマンド。",
+    "core:window:allow-start-dragging … data-tauri-drag-region で窓を掴んで動かすのに必須。core:window:default には入っていない。"
+  ]
+}

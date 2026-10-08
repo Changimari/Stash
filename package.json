@@ -1,0 +1,52 @@
+{
+  "name": "stash",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "start": "tauri dev",
+    "package": "tauri build"
+  },
+  "dependencies": {
+    "@crabnebula/tauri-plugin-drag": "^2.1.0",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-autostart": "^2.5.1",
+    "@tauri-apps/plugin-dialog": "^2.7.2",
+    "@tauri-apps/plugin-fs": "^2.5.1",
+    "@tauri-apps/plugin-global-shortcut": "^2.3.2",
+    "@tauri-apps/plugin-opener": "^2.5.4",
+    "@tauri-apps/plugin-os": "^2.3.2",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-sql": "^2.4.0",
+    "@tauri-apps/plugin-store": "^2.4.4",
+    "@tauri-apps/plugin-updater": "^2.10.1",
+    "fuse.js": "^7.5.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tauri-plugin-clipboard-api": "^2.1.11",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.5",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~5.9.0",
+    "vite": "^8.2.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@tauri-apps/api": "^2.11.1"
+    },
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

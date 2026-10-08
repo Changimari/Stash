@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Stash Overlay</title>
+  </head>
+  <!-- 背景はネイティブ vibrancy（NSVisualEffectView / Mica）が描く。
+       webview 側は完全に透明にしておくこと。CSS backdrop-filter で偽装しない。 -->
+  <body class="stash-overlay">
+    <div id="root"></div>
+    <script type="module" src="/src/windows/overlay/main.tsx"></script>
+  </body>
+</html>

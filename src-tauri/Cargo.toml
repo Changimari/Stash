@@ -1,0 +1,66 @@
+[package]
+name = "stash"
+version = "0.1.0"
+description = "Keyboard-first material launcher"
+authors = ["you"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+# デスクトップに加えてモバイル対応も見据えた Tauri 2 の標準構成
+name = "stash_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# macos-private-api: 透明窓（vibrancy の前提）/ protocol-asset: サムネを asset:// で読む
+tauri = { version = "2", features = [
+  "tray-icon",
+  "image-png",
+  "macos-private-api",
+  "protocol-asset",
+] }
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-os = "2"
+tauri-plugin-store = "2"
+tauri-plugin-drag = "2"
+tauri-plugin-clipboard = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+image = "0.25"
+sha2 = "0.10"
+rayon = "1"
+thiserror = "2"
+
+[target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
+tauri-plugin-global-shortcut = "2"
+# ランチャーは常駐アプリなので二重起動を防ぎ、2 回目の起動は既存プロセスに転送する
+tauri-plugin-single-instance = "2"
+# 常駐ランチャーはログイン時に立ち上がっていないと使われない
+tauri-plugin-autostart = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+
+# ネイティブのすりガラス背景（macOS: NSVisualEffectView / Windows: Mica・Acrylic）
+[target."cfg(any(target_os = \"macos\", target_os = \"windows\"))".dependencies]
+window-vibrancy = "0.8"
+
+# 「いまファイルをドラッグ中か」をドラッグ用ペーストボードから判定するために使う。
+# tao/wry が既に同じ版を引いているので、実質的な追加コストは無い。
+[target."cfg(target_os = \"macos\")".dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSPasteboard"] }
+objc2-foundation = "0.3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

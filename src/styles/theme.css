@@ -1,0 +1,160 @@
+/* ─────────────────────────────────────────────────────────────
+   Stash デザイントークン
+   §5「Apple 純正級」の基準をここ 1 枚に集約する。
+   参照: Spotlight / システム設定 / Quick Look。
+   色を足したくなったら、まず 1 つ削れないか考えること。
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  color-scheme: light dark;
+
+  /* ── タイポグラフィ（Apple HIG のスケールに準拠） ── */
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP",
+    system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+
+  --text-title: 17px; /* Title 3 */
+  --text-headline: 13px; /* Headline = body の semibold */
+  --text-body: 13px; /* Body（既定） */
+  --text-caption: 11px; /* Caption 1 */
+  --text-footnote: 10px; /* Caption 2 */
+  --text-query: 19px; /* オーバーレイの検索欄だけは主役なので大きく */
+
+  --tracking-tight: -0.01em;
+  --tracking-query: -0.015em;
+
+  /* ── 形状 ── */
+  --radius-window: 16px; /* src-tauri/src/overlay.rs の WINDOW_RADIUS と揃える */
+  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  --hairline: 1px;
+
+  /* ── モーション（過剰なアニメは禁止） ── */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-window: 150ms; /* 窓の表示 */
+  --dur-normal: 120ms;
+  --dur-fast: 80ms; /* 選択移動はスナップ的に */
+
+  /* ── 影 ── */
+  --shadow-popover: 0 8px 28px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.14);
+  --shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* ── ライト ── */
+:root,
+:root[data-theme="light"] {
+  --label-1: rgba(0, 0, 0, 0.88);
+  --label-2: rgba(0, 0, 0, 0.55);
+  --label-3: rgba(0, 0, 0, 0.34);
+  --label-4: rgba(0, 0, 0, 0.2);
+
+  --separator: rgba(0, 0, 0, 0.1);
+  --separator-strong: rgba(0, 0, 0, 0.16);
+
+  --fill-1: rgba(0, 0, 0, 0.04);
+  --fill-2: rgba(0, 0, 0, 0.07);
+  --fill-3: rgba(0, 0, 0, 0.11);
+
+  --surface: #ffffff;
+  --surface-raised: #f7f7f9;
+  --surface-sunken: #ececef;
+
+  /* vibrancy の上に薄く重ねる膜。ネイティブのブラーを消さない程度に。 */
+  --scrim: rgba(255, 255, 255, 0.4);
+  --scrim-strong: rgba(250, 250, 252, 0.72);
+  --window-edge: rgba(255, 255, 255, 0.7);
+  --window-ring: rgba(0, 0, 0, 0.14);
+
+  --accent: #007aff;
+  --accent-hover: #0a6fe0;
+  --accent-soft: rgba(0, 122, 255, 0.13);
+  --on-accent: #ffffff;
+
+  --danger: #d70015;
+  --warning: #b25000;
+
+  --checker-a: #f2f2f4;
+  --checker-b: #e7e7ea;
+}
+
+/* ── ダーク（オーバーレイはこちらが基準の見た目） ── */
+:root[data-theme="dark"] {
+  --label-1: rgba(255, 255, 255, 0.92);
+  --label-2: rgba(255, 255, 255, 0.58);
+  --label-3: rgba(255, 255, 255, 0.36);
+  --label-4: rgba(255, 255, 255, 0.22);
+
+  --separator: rgba(255, 255, 255, 0.1);
+  --separator-strong: rgba(255, 255, 255, 0.16);
+
+  --fill-1: rgba(255, 255, 255, 0.06);
+  --fill-2: rgba(255, 255, 255, 0.1);
+  --fill-3: rgba(255, 255, 255, 0.15);
+
+  --surface: #1c1c1e;
+  --surface-raised: #2a2a2d;
+  --surface-sunken: #131315;
+
+  --scrim: rgba(24, 24, 26, 0.28);
+  --scrim-strong: rgba(28, 28, 30, 0.66);
+  --window-edge: rgba(255, 255, 255, 0.13);
+  --window-ring: rgba(0, 0, 0, 0.5);
+
+  --accent: #0a84ff;
+  --accent-hover: #339bff;
+  --accent-soft: rgba(10, 132, 255, 0.22);
+  --on-accent: #ffffff;
+
+  --danger: #ff453a;
+  --warning: #ff9f0a;
+
+  --checker-a: #232326;
+  --checker-b: #1b1b1e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --label-1: rgba(255, 255, 255, 0.92);
+    --label-2: rgba(255, 255, 255, 0.58);
+    --label-3: rgba(255, 255, 255, 0.36);
+    --label-4: rgba(255, 255, 255, 0.22);
+
+    --separator: rgba(255, 255, 255, 0.1);
+    --separator-strong: rgba(255, 255, 255, 0.16);
+
+    --fill-1: rgba(255, 255, 255, 0.06);
+    --fill-2: rgba(255, 255, 255, 0.1);
+    --fill-3: rgba(255, 255, 255, 0.15);
+
+    --surface: #1c1c1e;
+    --surface-raised: #2a2a2d;
+    --surface-sunken: #131315;
+
+    --scrim: rgba(24, 24, 26, 0.28);
+    --scrim-strong: rgba(28, 28, 30, 0.66);
+    --window-edge: rgba(255, 255, 255, 0.13);
+    --window-ring: rgba(0, 0, 0, 0.5);
+
+    --accent: #0a84ff;
+    --accent-hover: #339bff;
+    --accent-soft: rgba(10, 132, 255, 0.22);
+    --on-accent: #ffffff;
+
+    --danger: #ff453a;
+    --warning: #ff9f0a;
+
+    --checker-a: #232326;
+    --checker-b: #1b1b1e;
+  }
+}
+
+/* ネイティブのすりガラスが使えない環境（Linux / 旧 Windows）では
+   膜を不透明に差し替えて破綻を防ぐ（§11 vibrancy フォールバック）。 */
+:root[data-material="opaque"] {
+  --scrim: var(--surface);
+  --scrim-strong: var(--surface);
+}
