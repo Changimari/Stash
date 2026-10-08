@@ -63,7 +63,8 @@ PY
 
 echo "==> コミットとタグ"
 git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
-git commit -qm "$VERSION"
+# 既にその version のときは差分が無い。初回リリースや作り直しで通るので止めない。
+git diff --cached --quiet || git commit -qm "$VERSION"
 git tag "$TAG"
 git push -q origin HEAD --tags
 
