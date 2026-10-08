@@ -574,6 +574,47 @@ pub async fn delete_managed_files(paths: Vec<String>, folder: String) -> Result<
     .await
 }
 
+/// 元ファイルをゴミ箱へ送る。
+///
+/// Shelf の「取り出し＝移動」で使う。OS のドラッグは常に copy で渡す
+/// （move を宣言すると多くのアプリがドロップを拒否するため）ので、移動の後片付けは自分でやる。
+/// **消さずにゴミ箱に入れる**のが肝。ドロップ先が本当に保存したかは分からないので、
+/// 取りこぼしても戻せる状態にしておく。
+#[tauri::command]
+pub async fn trash_files(paths: Vec<String>) -> Result<usize> {
+    blocking(move || {
+        let mut moved = 0;
+        for path in &paths {
+            if trash_one(Path::new(path)).is_ok() {
+                moved += 1;
+            }
+        }
+        Ok(moved)
+    })
+    .await
+}
+
+#[cfg(target_os = "macos")]
+fn trash_one(path: &Path) -> Result<()> {
+    use objc2_foundation::{NSFileManager, NSString, NSURL};
+    if !path.exists() {
+        return Err(MediaError::Other("ファイルが見つかりません".into()));
+    }
+    unsafe {
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+        NSFileManager::defaultManager()
+            .trashItemAtURL_resultingItemURL_error(&url, None)
+            .map_err(|e| MediaError::Other(e.localizedDescription().to_string()))
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn trash_one(_path: &Path) -> Result<()> {
+    // ponytail: macOS のみ。Windows は SHFileOperation(FOF_ALLOWUNDO) が要るが、
+    // 移動が効かないぶんは「Shelf から消えるだけ」で実害が無いので後回し。
+    Err(MediaError::Other("この OS ではゴミ箱へ送れません".into()))
+}
+
 /// 素材が実在するかの確認。ライブラリの「リンク切れ」表示に使う。
 #[tauri::command]
 pub async fn paths_exist(paths: Vec<String>) -> Result<Vec<bool>> {
@@ -715,5 +756,35 @@ mod tests {
         assert!(is_image_path(Path::new("/tmp/a.heic")));
         assert!(is_image_path(Path::new("/tmp/a.HEIC")));
         assert!(!is_image_path(Path::new("/tmp/a.pdf")));
+    }
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod trash_tests {
+    use super::*;
+
+    #[test]
+    fn trash_moves_file_out_of_the_way_without_deleting_it() {
+        let dir = std::env::temp_dir().join("stash-trash-test");
+        let _ = fs::create_dir_all(&dir);
+        let file = dir.join("stash-trash-sample.txt");
+        fs::write(&file, "bytes").unwrap();
+
+        trash_one(&file).unwrap();
+
+        // 元の場所からは消えるが、消滅ではなくゴミ箱へ移っている
+        assert!(!file.exists(), "元の場所には残らない");
+        let trashed = dirs_trash().join("stash-trash-sample.txt");
+        assert!(trashed.exists(), "ゴミ箱に入っている: {trashed:?}");
+        let _ = fs::remove_file(&trashed);
+    }
+
+    fn dirs_trash() -> PathBuf {
+        PathBuf::from(std::env::var("HOME").unwrap()).join(".Trash")
+    }
+
+    #[test]
+    fn trash_reports_missing_file() {
+        assert!(trash_one(Path::new("/tmp/stash-does-not-exist-xyz")).is_err());
     }
 }

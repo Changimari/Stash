@@ -13,6 +13,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Icon } from "@/components/Icon";
 import { dragOutPaths } from "@/lib/drag";
+import { resolveLibraryFolder } from "@/lib/library-folder";
 import { formatBytes } from "@/lib/format";
 import { thumbUrl } from "@/lib/image";
 import { importPaths } from "@/lib/import";
@@ -39,22 +40,39 @@ export function ShelfApp() {
 
   const refresh = useCallback(async () => setItems(await readShelf()), []);
 
-  /**
-   * 取り出す。
-   *
-   * OS へ渡すのは常に複製（move を宣言すると多くのアプリがドロップを拒否する）。
-   * 「取り出したら手元から消える」感触は、Shelf の項目を消すことで表す。
-   * `⌥` を押しながらなら Shelf に残す。実ファイルはどちらでも元の場所に残る。
-   */
-  const takeOut = useCallback((targets: string[], keep: boolean, icon: string | null) => {
-    void dragOutPaths(targets, {
-      retreat: true,
-      icon,
-      onFinish: (result) => {
-        if (!keep && result === "Dropped") void removeFromShelf(targets);
-      },
-    });
+  /** ライブラリ管理下の実体はゴミ箱に送らない（送るとライブラリが壊れる）。 */
+  const [libraryFolder, setLibraryFolder] = useState("");
+  useEffect(() => {
+    void resolveLibraryFolder().then(setLibraryFolder);
   }, []);
+
+  /**
+   * 取り出す。既定は**移動**、`⌥` を押しながらなら複製。
+   *
+   * OS へ渡す操作は常に複製にする。`mode: "move"` を宣言すると Finder 以外の
+   * ほとんどのアプリ（Electron 製含む）がドロップ自体を拒否するため。
+   * 移動の後片付け——元ファイルの始末——はこちらでやる。
+   *
+   * 消さずに**ゴミ箱へ送る**。ドロップ先が本当に保存したかは `Dropped` では分からないので、
+   * 取りこぼしても戻せるようにしておく。
+   */
+  const takeOut = useCallback(
+    (targets: string[], copy: boolean, icon: string | null) => {
+      void dragOutPaths(targets, {
+        retreat: true,
+        icon,
+        onFinish: (result) => {
+          if (copy || result !== "Dropped") return;
+          const managed = libraryFolder
+            ? targets.filter((p) => !p.startsWith(libraryFolder))
+            : targets;
+          if (managed.length > 0) void native.trashFiles(managed);
+          void removeFromShelf(targets);
+        },
+      });
+    },
+    [libraryFolder],
+  );
 
   const flash = useCallback((message: string) => {
     setNote(message);
@@ -238,7 +256,7 @@ export function ShelfApp() {
           </button>
 
           <p className="shrink-0 px-3 pt-1 text-center text-footnote text-label-3">
-            取り出すと Shelf から消えます · ⌥ で残す
+            取り出すと元ファイルはゴミ箱へ · ⌥ で複製
           </p>
 
           <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
@@ -246,7 +264,7 @@ export function ShelfApp() {
               <ShelfRow
                 key={item.path}
                 item={item}
-                onDrag={(keep) => takeOut([item.path], keep, item.thumbnailPath)}
+                onDrag={(copy) => takeOut([item.path], copy, item.thumbnailPath)}
                 onRemove={() => void removeFromShelf([item.path])}
               />
             ))}
@@ -307,8 +325,8 @@ function ShelfRow({
   onRemove,
 }: {
   item: ShelfItem;
-  /** Option を押しながら掴んだか（true なら Shelf に残す）。 */
-  onDrag: (keep: boolean) => void;
+  /** Option を押しながら掴んだか（true なら複製＝元を残す）。 */
+  onDrag: (copy: boolean) => void;
   onRemove: () => void;
 }) {
   return (

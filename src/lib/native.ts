@@ -81,6 +81,8 @@ export const native = {
   /** 実ファイルをライブラリフォルダへ移動 / コピーする。 */
   adoptFiles: (paths: string[], folder: string, moveFile: boolean) =>
     invoke<AdoptResult[]>("adopt_files", { paths, folder, moveFile }),
+  /** 元ファイルをゴミ箱へ送る（Shelf の「移動」の後片付け）。 */
+  trashFiles: (paths: string[]) => invoke<number>("trash_files", { paths }),
   /** ライブラリフォルダの中にあるものだけ削除する。 */
   deleteManagedFiles: (paths: string[], folder: string) =>
     invoke<number>("delete_managed_files", { paths, folder }),

@@ -60,6 +60,7 @@ pub fn run() {
             media::default_library_folder,
             media::adopt_files,
             media::delete_managed_files,
+            media::trash_files,
             overlay::show_overlay,
             overlay::hide_overlay,
             overlay::retreat_overlay,

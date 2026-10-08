@@ -289,8 +289,11 @@ pub fn start_watching(app: &AppHandle) {
     std::thread::spawn(move || {
         let mut shown_for_this_drag = false;
         let mut last_side: Option<&'static str> = None;
-        // ボタンを押した瞬間のドラッグ用ペーストボードの世代。
-        // これが増えたら「押してからドラッグが始まった」＝ドラッグ中と分かる。
+        // ドラッグ用ペーストボードの世代番号を、ボタンが上がっている間ずっと控えておく。
+        //
+        // 「ボタンが下がった瞬間に控える」だと、押してから最初のポーリングまでの 60ms の間に
+        // ドラッグが始まってしまった場合に取りこぼす。上がっている間の値なら必ずドラッグ前。
+        let mut idle_count = input::drag_pasteboard_change_count();
         let mut baseline: Option<isize> = None;
 
         loop {
@@ -299,7 +302,7 @@ pub fn start_watching(app: &AppHandle) {
             }
 
             if input::left_button_down() {
-                let base = *baseline.get_or_insert_with(input::drag_pasteboard_change_count);
+                let base = *baseline.get_or_insert(idle_count);
 
                 // 単なる Shift+クリックで開かないよう、実際にファイルを掴んでいるときだけ反応する。
                 // 自前のドラッグ（Shelf からの取り出し）は除く。
@@ -340,6 +343,7 @@ pub fn start_watching(app: &AppHandle) {
 
             if !input::left_button_down() {
                 baseline = None;
+                idle_count = input::drag_pasteboard_change_count();
             }
             std::thread::sleep(POLL_INTERVAL);
         }
