@@ -17,7 +17,7 @@ import { resolveLibraryFolder } from "@/lib/library-folder";
 import { formatBytes } from "@/lib/format";
 import { thumbUrl } from "@/lib/image";
 import { importPaths } from "@/lib/import";
-import { native } from "@/lib/native";
+import { native, type TrashedItem } from "@/lib/native";
 import {
   clearShelf,
   putOnShelf,
@@ -66,18 +66,39 @@ export function ShelfApp() {
           const managed = libraryFolder
             ? targets.filter((p) => !p.startsWith(libraryFolder))
             : targets;
-          if (managed.length > 0) void native.trashFiles(managed);
           void removeFromShelf(targets);
+          if (managed.length === 0) return;
+          // `Dropped` は「受け手が受理した」までしか保証しない。実際に届いたかは分からないので、
+          // 捨てたものを戻せる状態にして見せておく（フォルダが届かず消えた事故があった）。
+          void native.trashFiles(managed).then((trashed) => {
+            if (trashed.length > 0) setUndo(trashed);
+          });
         },
       });
     },
     [libraryFolder],
   );
 
+
   const flash = useCallback((message: string) => {
     setNote(message);
     window.setTimeout(() => setNote(null), 2400);
   }, []);
+
+  /** 直前にゴミ箱へ送ったもの。「元に戻す」で復帰させる。 */
+  const [undo, setUndo] = useState<TrashedItem[]>([]);
+  useEffect(() => {
+    if (undo.length === 0) return;
+    const timer = window.setTimeout(() => setUndo([]), 20000);
+    return () => window.clearTimeout(timer);
+  }, [undo]);
+
+  const restore = useCallback(async () => {
+    const n = await native.restoreTrashed(undo);
+    await putOnShelf(undo.map((i) => i.original));
+    setUndo([]);
+    flash(n > 0 ? `${n} 件を元の場所に戻しました` : "戻せませんでした");
+  }, [undo, flash]);
 
   useEffect(() => {
     void refresh();
@@ -283,6 +304,21 @@ export function ShelfApp() {
           </div>
         </>
       )}
+
+      {undo.length > 0 ? (
+        <div className="flex shrink-0 items-center gap-2 px-3 py-1.5 hairline-t">
+          <span className="min-w-0 flex-1 truncate text-footnote text-label-2">
+            {undo.length} 件をゴミ箱へ送りました
+          </span>
+          <button
+            type="button"
+            onClick={() => void restore()}
+            className="shrink-0 rounded-sm px-2 py-0.5 text-footnote text-accent transition-colors hover:bg-fill-1"
+          >
+            元に戻す
+          </button>
+        </div>
+      ) : null}
 
       {note ? (
         <div className="shrink-0 truncate px-3 py-1.5 text-footnote text-label-2 hairline-t">

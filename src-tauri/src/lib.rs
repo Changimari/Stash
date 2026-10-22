@@ -61,6 +61,7 @@ pub fn run() {
             media::adopt_files,
             media::delete_managed_files,
             media::trash_files,
+            media::restore_trashed,
             overlay::show_overlay,
             overlay::hide_overlay,
             overlay::retreat_overlay,

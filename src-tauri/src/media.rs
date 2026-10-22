@@ -580,36 +580,99 @@ pub async fn delete_managed_files(paths: Vec<String>, folder: String) -> Result<
 /// （move を宣言すると多くのアプリがドロップを拒否するため）ので、移動の後片付けは自分でやる。
 /// **消さずにゴミ箱に入れる**のが肝。ドロップ先が本当に保存したかは分からないので、
 /// 取りこぼしても戻せる状態にしておく。
+#[derive(Serialize, serde::Deserialize, Clone)]
+pub struct TrashedItem {
+    pub original: String,
+    /// ゴミ箱の中での実際の場所。同名があると改名されるので控えておく。
+    pub trashed: String,
+}
+
 #[tauri::command]
-pub async fn trash_files(paths: Vec<String>) -> Result<usize> {
+pub async fn trash_files(paths: Vec<String>) -> Result<Vec<TrashedItem>> {
     blocking(move || {
-        let mut moved = 0;
-        for path in &paths {
-            if trash_one(Path::new(path)).is_ok() {
-                moved += 1;
-            }
-        }
-        Ok(moved)
+        Ok(paths
+            .iter()
+            .filter_map(|p| {
+                trash_one(Path::new(p)).ok().map(|trashed| TrashedItem {
+                    original: p.clone(),
+                    trashed,
+                })
+            })
+            .collect())
     })
     .await
 }
 
+/// ゴミ箱から元の場所へ戻す。取り出しが実らなかったときの救済。
+#[tauri::command]
+pub async fn restore_trashed(items: Vec<TrashedItem>) -> Result<usize> {
+    blocking(move || {
+        let mut restored = 0;
+        for item in &items {
+            let from = Path::new(&item.trashed);
+            let to = Path::new(&item.original);
+            if !from.exists() || to.exists() {
+                continue;
+            }
+            if let Some(parent) = to.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            // 別ボリュームだと rename は失敗するので、その時だけ複製して消す
+            let ok = fs::rename(from, to).is_ok() || copy_tree(from, to).and_then(|_| {
+                remove_tree(from)
+            }).is_ok();
+            if ok {
+                restored += 1;
+            }
+        }
+        Ok(restored)
+    })
+    .await
+}
+
+fn copy_tree(from: &Path, to: &Path) -> Result<()> {
+    if from.is_dir() {
+        fs::create_dir_all(to)?;
+        for entry in fs::read_dir(from)?.flatten() {
+            copy_tree(&entry.path(), &to.join(entry.file_name()))?;
+        }
+    } else {
+        fs::copy(from, to)?;
+    }
+    Ok(())
+}
+
+fn remove_tree(path: &Path) -> Result<()> {
+    if path.is_dir() {
+        fs::remove_dir_all(path)?;
+    } else {
+        fs::remove_file(path)?;
+    }
+    Ok(())
+}
+
 #[cfg(target_os = "macos")]
-fn trash_one(path: &Path) -> Result<()> {
+fn trash_one(path: &Path) -> Result<String> {
     use objc2_foundation::{NSFileManager, NSString, NSURL};
     if !path.exists() {
         return Err(MediaError::Other("ファイルが見つかりません".into()));
     }
     unsafe {
         let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+        // 戻せるように、ゴミ箱の中での場所を受け取る（同名があると改名される）
+        let mut landed = None;
         NSFileManager::defaultManager()
-            .trashItemAtURL_resultingItemURL_error(&url, None)
-            .map_err(|e| MediaError::Other(e.localizedDescription().to_string()))
+            .trashItemAtURL_resultingItemURL_error(&url, Some(&mut landed))
+            .map_err(|e| MediaError::Other(e.localizedDescription().to_string()))?;
+        Ok(landed
+            .and_then(|u| u.path())
+            .map(|p| p.to_string())
+            .unwrap_or_default())
     }
 }
 
 #[cfg(not(target_os = "macos"))]
-fn trash_one(_path: &Path) -> Result<()> {
+fn trash_one(_path: &Path) -> Result<String> {
     // ponytail: macOS のみ。Windows は SHFileOperation(FOF_ALLOWUNDO) が要るが、
     // 移動が効かないぶんは「Shelf から消えるだけ」で実害が無いので後回し。
     Err(MediaError::Other("この OS ではゴミ箱へ送れません".into()))
@@ -770,7 +833,8 @@ mod trash_tests {
         let file = dir.join("stash-trash-sample.txt");
         fs::write(&file, "bytes").unwrap();
 
-        trash_one(&file).unwrap();
+        let landed = trash_one(&file).unwrap();
+        assert!(landed.contains(".Trash"), "戻せるよう移動先が返る: {landed}");
 
         // 元の場所からは消えるが、消滅ではなくゴミ箱へ移っている
         assert!(!file.exists(), "元の場所には残らない");

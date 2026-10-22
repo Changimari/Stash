@@ -21,6 +21,11 @@ export interface ThumbResult {
   error: string | null;
 }
 
+export interface TrashedItem {
+  original: string;
+  trashed: string;
+}
+
 export interface AdoptResult {
   original: string;
   path: string;
@@ -82,7 +87,9 @@ export const native = {
   adoptFiles: (paths: string[], folder: string, moveFile: boolean) =>
     invoke<AdoptResult[]>("adopt_files", { paths, folder, moveFile }),
   /** 元ファイルをゴミ箱へ送る（Shelf の「移動」の後片付け）。 */
-  trashFiles: (paths: string[]) => invoke<number>("trash_files", { paths }),
+  trashFiles: (paths: string[]) => invoke<TrashedItem[]>("trash_files", { paths }),
+  /** ゴミ箱から元の場所へ戻す。取り出しが実らなかったときの救済。 */
+  restoreTrashed: (items: TrashedItem[]) => invoke<number>("restore_trashed", { items }),
   /** ライブラリフォルダの中にあるものだけ削除する。 */
   deleteManagedFiles: (paths: string[], folder: string) =>
     invoke<number>("delete_managed_files", { paths, folder }),

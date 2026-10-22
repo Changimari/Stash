@@ -351,8 +351,17 @@ function LaunchAtLoginRow() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // 登録には「登録した時点の実行ファイルの場所」が焼き込まれる。アプリを動かしたり
+    // 開発ビルドで有効にしたりすると、そのまま古い場所を指し続けて静かに起動しなくなる。
+    // 有効なら毎回登録し直して、いま動いている実行ファイルに合わせる。
     isEnabled()
-      .then(setEnabled)
+      .then(async (on) => {
+        if (on) {
+          await disable().catch(() => {});
+          await enable().catch(() => {});
+        }
+        setEnabled(on);
+      })
       .catch(() => setEnabled(false));
   }, []);
 
