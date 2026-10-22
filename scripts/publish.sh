@@ -43,6 +43,20 @@ TARBALL="$BUNDLE/macos/Stash.app.tar.gz"
 SIG="$TARBALL.sig"
 [[ -f "$SIG" ]] || { echo "エラー: $SIG が無い。アップデータ署名鍵を確認する" >&2; exit 1; }
 
+echo "==> dmg を作る"
+# Tauri の dmg 作成は使わない（Finder を AppleScript で操作し、廃止済みの
+# hdiutil internet-enable も呼ぶので失敗する）。中身は .app と Applications への
+# 別名だけなので、hdiutil で素直に作れば十分。
+DMG="$BUNDLE/dmg/Stash_${VERSION}_aarch64.dmg"
+STAGE="$(mktemp -d)"
+cp -R "$BUNDLE/macos/Stash.app" "$STAGE/"
+ln -s /Applications "$STAGE/Applications"
+mkdir -p "$BUNDLE/dmg"
+rm -f "$DMG"
+hdiutil create -volname "Stash" -srcfolder "$STAGE" -ov -format UDZO -quiet "$DMG"
+rm -rf "$STAGE"
+echo "  $DMG"
+
 echo "==> latest.json を作る"
 python3 - "$VERSION" "$REPO" "$TAG" "$SIG" <<'PY'
 import datetime, json, sys
@@ -70,7 +84,7 @@ git push -q origin HEAD --tags
 
 echo "==> GitHub Release"
 gh release create "$TAG" --title "Stash $VERSION" --notes "Stash $VERSION" \
-  "$TARBALL" "$SIG" latest.json $BUNDLE/dmg/*.dmg
+  "$TARBALL" "$SIG" latest.json "$DMG"
 rm -f latest.json
 
 echo
