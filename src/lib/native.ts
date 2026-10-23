@@ -88,6 +88,8 @@ export const native = {
     invoke<AdoptResult[]>("adopt_files", { paths, folder, moveFile }),
   /** 元ファイルをゴミ箱へ送る（Shelf の「移動」の後片付け）。 */
   trashFiles: (paths: string[]) => invoke<TrashedItem[]>("trash_files", { paths }),
+  /** ドラッグで渡すための複製を作る（元を即片付けても受け手が読めるように）。 */
+  stageForDrag: (paths: string[]) => invoke<string[]>("stage_for_drag", { paths }),
   /** ゴミ箱から元の場所へ戻す。取り出しが実らなかったときの救済。 */
   restoreTrashed: (items: TrashedItem[]) => invoke<number>("restore_trashed", { items }),
   /** ライブラリフォルダの中にあるものだけ削除する。 */

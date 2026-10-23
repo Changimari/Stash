@@ -58,23 +58,29 @@ export function ShelfApp() {
    */
   const takeOut = useCallback(
     (targets: string[], copy: boolean, icon: string | null) => {
-      void dragOutPaths(targets, {
-        retreat: true,
-        icon,
-        onFinish: (result) => {
-          if (copy || result !== "Dropped") return;
-          const managed = libraryFolder
-            ? targets.filter((p) => !p.startsWith(libraryFolder))
-            : targets;
-          void removeFromShelf(targets);
-          if (managed.length === 0) return;
-          // `Dropped` は「受け手が受理した」までしか保証しない。実際に届いたかは分からないので、
-          // 捨てたものを戻せる状態にして見せておく（フォルダが届かず消えた事故があった）。
-          void native.trashFiles(managed).then((trashed) => {
-            if (trashed.length > 0) setUndo(trashed);
-          });
-        },
-      });
+      void (async () => {
+        // 移動のときは**複製を渡す**。受け手は受理のあと非同期に読むので、
+        // 元をそのまま渡して片付けると読んでいる途中で消えてしまう（エラー -43）。
+        const items = copy ? targets : await native.stageForDrag(targets);
+        if (items.length === 0) return;
+
+        await dragOutPaths(items, {
+          retreat: true,
+          icon,
+          onFinish: (result) => {
+            if (copy || result !== "Dropped") return;
+            // 保管フォルダの実体は動かさない（ライブラリが壊れる）
+            const removable = libraryFolder
+              ? targets.filter((p) => !p.startsWith(libraryFolder))
+              : targets;
+            void removeFromShelf(targets);
+            if (removable.length === 0) return;
+            void native.trashFiles(removable).then((trashed) => {
+              if (trashed.length > 0) setUndo(trashed);
+            });
+          },
+        });
+      })();
     },
     [libraryFolder],
   );

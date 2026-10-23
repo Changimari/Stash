@@ -62,6 +62,7 @@ pub fn run() {
             media::delete_managed_files,
             media::trash_files,
             media::restore_trashed,
+            media::stage_for_drag,
             overlay::show_overlay,
             overlay::hide_overlay,
             overlay::retreat_overlay,
@@ -83,6 +84,7 @@ pub fn run() {
         ])
         .setup(|app| {
             let handle = app.handle();
+            media::clean_drag_stage();
 
             if let Some(window) = app.get_webview_window(overlay::OVERLAY) {
                 overlay::apply_overlay_material(&window);

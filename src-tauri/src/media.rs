@@ -603,6 +603,55 @@ pub async fn trash_files(paths: Vec<String>) -> Result<Vec<TrashedItem>> {
     .await
 }
 
+/// ドラッグで渡すための複製を作る。
+///
+/// **なぜ複製を渡すか。** ドラッグ操作は `copy` で渡している（`move` を宣言すると
+/// 多くのアプリがドロップを拒否するため）。受け手は「受理」した後、**非同期に**元を読んで
+/// コピーする。そこで元をゴミ箱へ送ると、読んでいる途中のファイルが消えて
+/// Finder がエラー -43（項目が見つからない）を出し、しかも元は消えたままになる。
+/// 閉じたフォルダへ落とすとコピー開始が遅れるので特に当たりやすい。
+///
+/// 複製を渡せば、元をすぐ片付けても受け手は自分のペースで読める。
+#[tauri::command]
+pub async fn stage_for_drag(paths: Vec<String>) -> Result<Vec<String>> {
+    blocking(move || {
+        let stage = std::env::temp_dir().join(format!(
+            "stash-drag-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or(0)
+        ));
+        fs::create_dir_all(&stage)?;
+
+        let mut staged = Vec::new();
+        for path in &paths {
+            let src = Path::new(path);
+            let Some(name) = src.file_name() else { continue };
+            let dest = stage.join(name);
+            // 名前はそのまま保つ。受け手には元と同じ名前で届く。
+            if copy_tree(src, &dest).is_ok() {
+                staged.push(dest.to_string_lossy().into_owned());
+            }
+        }
+        Ok(staged)
+    })
+    .await
+}
+
+/// 前回までの受け渡し用の複製を片付ける。起動時に 1 回。
+pub fn clean_drag_stage() {
+    let Ok(entries) = fs::read_dir(std::env::temp_dir()) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        if entry.file_name().to_string_lossy().starts_with("stash-drag-") {
+            let _ = fs::remove_dir_all(entry.path());
+        }
+    }
+}
+
 /// ゴミ箱から元の場所へ戻す。取り出しが実らなかったときの救済。
 #[tauri::command]
 pub async fn restore_trashed(items: Vec<TrashedItem>) -> Result<usize> {
