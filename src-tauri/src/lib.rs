@@ -63,6 +63,7 @@ pub fn run() {
             media::trash_files,
             media::restore_trashed,
             media::stage_for_drag,
+            media::app_at_point,
             overlay::show_overlay,
             overlay::hide_overlay,
             overlay::retreat_overlay,

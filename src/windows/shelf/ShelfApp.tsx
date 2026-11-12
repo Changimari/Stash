@@ -28,6 +28,9 @@ import {
 } from "@/lib/shelf";
 import { notifyLibraryChanged } from "@/store/library";
 
+/** ここへ落としたときだけ「移動」にする。ファイルを置く場所だから。 */
+const FILE_MANAGERS = ["Finder", "Path Finder", "ForkLift", "Commander One"];
+
 type Side = "library" | "shelf" | null;
 type Mode = "drop" | "list";
 
@@ -67,22 +70,32 @@ export function ShelfApp() {
         await dragOutPaths(items, {
           retreat: true,
           icon,
-          onFinish: (result) => {
+          onFinish: (result, at) => {
             if (copy || result !== "Dropped") return;
-            // 保管フォルダの実体は動かさない（ライブラリが壊れる）
-            const removable = libraryFolder
-              ? targets.filter((p) => !p.startsWith(libraryFolder))
-              : targets;
             void removeFromShelf(targets);
-            if (removable.length === 0) return;
-            void native.trashFiles(removable).then((trashed) => {
+
+            void (async () => {
+              // 落とし先で意味が変わる。Finder へ置いたならファイルが増えたので移動でよいが、
+              // Slack や Outlook のように中身を読んで貼り付けるだけのアプリに落としたとき
+              // 元を消すと、素材が手元から無くなってしまう。
+              const into = await native.appAtPoint(at.x, at.y);
+              if (!FILE_MANAGERS.includes(into ?? "")) {
+                flash(`${into ?? "アプリ"}へ貼り付けました（元ファイルはそのまま）`);
+                return;
+              }
+              // 保管フォルダの実体は動かさない（ライブラリが壊れる）
+              const removable = libraryFolder
+                ? targets.filter((p) => !p.startsWith(libraryFolder))
+                : targets;
+              if (removable.length === 0) return;
+              const trashed = await native.trashFiles(removable);
               if (trashed.length > 0) setUndo(trashed);
-            });
+            })();
           },
         });
       })();
     },
-    [libraryFolder],
+    [libraryFolder, flash],
   );
 
 

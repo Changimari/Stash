@@ -31,8 +31,8 @@ async function dragIconFor(asset: Asset): Promise<string> {
 }
 
 export interface DragHandlers {
-  /** ドロップ成功・キャンセルのどちらでも呼ばれる。 */
-  onFinish?: (result: "Dropped" | "Cancelled") => void;
+  /** ドロップ成功・キャンセルのどちらでも呼ばれる。座標は落とした位置。 */
+  onFinish?: (result: "Dropped" | "Cancelled", at: { x: number; y: number }) => void;
 }
 
 /**
@@ -51,7 +51,10 @@ export async function dragOut(
   await native.shelfOwnDrag(true);
   await startDrag({ item: [asset.filePath], icon, mode: "copy" }, (payload) => {
     void native.shelfOwnDrag(false);
-    options.onFinish?.(payload.result);
+    options.onFinish?.(payload.result, {
+      x: Number(payload.cursorPos.x),
+      y: Number(payload.cursorPos.y),
+    });
   });
 
 
@@ -86,7 +89,10 @@ export async function dragOutPaths(
   await native.shelfOwnDrag(true);
   await startDrag({ item: paths, icon, mode: "copy" }, (payload) => {
     void native.shelfOwnDrag(false);
-    options.onFinish?.(payload.result);
+    options.onFinish?.(payload.result, {
+      x: Number(payload.cursorPos.x),
+      y: Number(payload.cursorPos.y),
+    });
   });
 
   if (options.retreat) {

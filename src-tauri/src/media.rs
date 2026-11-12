@@ -901,3 +901,102 @@ mod trash_tests {
         assert!(trash_one(Path::new("/tmp/stash-does-not-exist-xyz")).is_err());
     }
 }
+
+// ─────────────────── 落とし先の判別 ───────────────────
+
+/// 指定座標にあるウィンドウの持ち主（アプリ名）。
+///
+/// 取り出しを「移動」にするか「複製」にするかの判断に使う。
+/// Finder のウィンドウやデスクトップへ落としたならファイルを置いた＝移動でよいが、
+/// Slack や Outlook のように**中身を読んで貼り付けるだけ**のアプリへ落としたときに
+/// 元を消すと、ユーザーの手元から素材が無くなってしまう。
+///
+/// ウィンドウ一覧を読むだけなので許可は要らない（画面収録の許可が要るのは中身の取得）。
+#[cfg(target_os = "macos")]
+#[tauri::command]
+pub fn app_at_point(x: f64, y: f64) -> Option<String> {
+    use core_foundation::base::{CFType, TCFType};
+    use core_foundation::dictionary::CFDictionary;
+    use core_foundation::number::CFNumber;
+    use core_foundation::string::CFString;
+    use core_graphics::window::{
+        copy_window_info, kCGNullWindowID, kCGWindowListOptionOnScreenOnly,
+    };
+
+    let infos = copy_window_info(kCGWindowListOptionOnScreenOnly, kCGNullWindowID)?;
+    let key = CFString::new;
+
+    // 前面から順に並んでいるので、最初に当たったものが落とし先
+    for info in infos.iter() {
+        let dict: CFDictionary<CFString, CFType> =
+            unsafe { CFDictionary::wrap_under_get_rule(*info as _) };
+
+        // 壁紙やメニューバーなど、通常より下/上の層は飛ばす（layer 0 が普通の窓）
+        let layer = dict
+            .find(&key("kCGWindowLayer"))
+            .and_then(|v| v.downcast::<CFNumber>())
+            .and_then(|n| n.to_i64())
+            .unwrap_or(0);
+        if layer != 0 {
+            continue;
+        }
+
+        // CFDictionary は downcast できないので、生のポインタから包み直す
+        let Some(bounds_ref) = dict.find(&key("kCGWindowBounds")) else {
+            continue;
+        };
+        let bounds: CFDictionary<CFString, CFType> =
+            unsafe { CFDictionary::wrap_under_get_rule(bounds_ref.as_CFTypeRef() as _) };
+        let num = |k: &str| -> f64 {
+            bounds
+                .find(&key(k))
+                .and_then(|v| v.downcast::<CFNumber>())
+                .and_then(|n| n.to_f64())
+                .unwrap_or(0.0)
+        };
+        let (bx, by, bw, bh) = (num("X"), num("Y"), num("Width"), num("Height"));
+        if x < bx || x > bx + bw || y < by || y > by + bh {
+            continue;
+        }
+
+        return dict
+            .find(&key("kCGWindowOwnerName"))
+            .and_then(|v| v.downcast::<CFString>())
+            .map(|s| s.to_string());
+    }
+    None
+}
+
+#[cfg(not(target_os = "macos"))]
+#[tauri::command]
+pub fn app_at_point(_x: f64, _y: f64) -> Option<String> {
+    None
+}
+
+#[cfg(all(test, target_os = "macos"))]
+mod drop_target_tests {
+    use super::*;
+
+    /// 画面の中ほどには何かしらの窓があり、その持ち主を名前で引けること。
+    /// どのアプリが前面かはテスト時に決まらないので、名前が取れることだけを見る。
+    /// 特定のアプリを確かめたいときは STASH_TEST_POINT="x,y,アプリ名"。
+    #[test]
+    fn finds_the_app_owning_a_point() {
+        if let Ok(spec) = std::env::var("STASH_TEST_POINT") {
+            let parts: Vec<&str> = spec.split(',').collect();
+            let (x, y) = (parts[0].parse().unwrap(), parts[1].parse().unwrap());
+            assert_eq!(app_at_point(x, y).as_deref(), Some(parts[2]));
+            return;
+        }
+        match app_at_point(700.0, 400.0) {
+            // 窓が 1 つも無い状態でも走れるよう、取れたときだけ中身を見る
+            Some(name) => assert!(!name.is_empty(), "持ち主の名前が取れる"),
+            None => {}
+        }
+    }
+
+    #[test]
+    fn nothing_at_an_impossible_point() {
+        assert_eq!(app_at_point(-99999.0, -99999.0), None);
+    }
+}
