@@ -43,6 +43,11 @@ export function ShelfApp() {
 
   const refresh = useCallback(async () => setItems(await readShelf()), []);
 
+  const flash = useCallback((message: string) => {
+    setNote(message);
+    window.setTimeout(() => setNote(null), 2400);
+  }, []);
+
   /** ライブラリ管理下の実体はゴミ箱に送らない（送るとライブラリが壊れる）。 */
   const [libraryFolder, setLibraryFolder] = useState("");
   useEffect(() => {
@@ -99,10 +104,6 @@ export function ShelfApp() {
   );
 
 
-  const flash = useCallback((message: string) => {
-    setNote(message);
-    window.setTimeout(() => setNote(null), 2400);
-  }, []);
 
   /** 直前にゴミ箱へ送ったもの。「元に戻す」で復帰させる。 */
   const [undo, setUndo] = useState<TrashedItem[]>([]);
